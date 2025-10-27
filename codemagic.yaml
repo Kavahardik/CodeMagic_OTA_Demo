@@ -54,8 +54,8 @@ workflows:
           cp ota/update.jsbundle deploy/
           cp ota/manifest.json deploy/
           npx gh-pages -d deploy \
-            -r https://kavahardik.github.io/CodeMagic_OTA_Demo/
-            -b gh-pages
+            -r https://github.com/Kavahardik/CodeMagic_OTA_Demo.git \
+            -b Code_Magic_OTA_Hardik
           echo "✅ OTA update deployed successfully to GitHub Pages"
 
       # 6️⃣ Build Android Release APK
