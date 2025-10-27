@@ -6,7 +6,7 @@ workflows:
       java: 17
       vars:
         YARN_IGNORE_ENGINES: 1
-        GITHUB_ACTOR: kavahardik
+        GITHUB_ACTOR: Kavahardik
         GITHUB_REPO: CodeMagic_OTA_Demo
         GITHUB_BRANCH: Code_Magic_OTA_Hardik
         GITHUB_TOKEN: $GITHUB_TOKEN # Add this in CodeMagic Environment Variables
