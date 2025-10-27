@@ -1,43 +1,71 @@
 workflows:
-  ota_deploy:
-    name: OTA Update via GitHub Pages
+  Android-Build-With-OTA:
+    name: Android Release Build + GitHub OTA
     environment:
       node: 20
+      npm: true
+      java: 17
+      vars:
+        YARN_IGNORE_ENGINES: 1
     scripts:
-      # 1️⃣ Install dependencies
+      # 1️⃣ Clean workspace
+      - name: Clean previous OTA and Android build files
+        script: |
+          rm -rf ota
+          mkdir -p ota
+          cd android
+          ./gradlew clean
+          cd ..
+
+      # 2️⃣ Install dependencies
       - name: Install dependencies
         script: |
-          npm install
+          echo "Installing dependencies..."
+          yarn install --ignore-engines
 
-      # 2️⃣ Bundle JS for production OTA
-      - name: Create OTA bundle
+      # 3️⃣ Generate OTA JS bundle
+      - name: Generate OTA bundle
         script: |
-          mkdir -p ota
+          echo "Creating OTA update bundle..."
           npx react-native bundle \
             --platform android \
             --dev false \
             --entry-file index.js \
             --bundle-output ota/update.jsbundle \
             --assets-dest ota/
+          echo "✅ JS bundle generated in ota/update.jsbundle"
 
-      # 3️⃣ Generate manifest.json dynamically
-      - name: Generate manifest.json
+      # 4️⃣ Create manifest.json
+      - name: Generate OTA manifest
         script: |
           VERSION=$(date +%s)
           echo "{ \"version\": \"$VERSION\", \"bundle\": \"update.jsbundle\" }" > ota/manifest.json
-          echo "Generated manifest.json with version $VERSION"
+          echo "✅ Created manifest.json with version $VERSION"
 
-      # 4️⃣ Deploy to GitHub Pages (gh-pages branch)
-      - name: Publish to GitHub Pages
+      # 5️⃣ Deploy OTA files to GitHub Pages
+      - name: Publish OTA to GitHub Pages
         script: |
+          echo "Deploying OTA update to GitHub Pages..."
           npm install -g gh-pages
           mkdir -p deploy
           cp ota/update.jsbundle deploy/
           cp ota/manifest.json deploy/
-          npx gh-pages -d deploy -r https://github.com/Kavahardik/CodeMagic_OTA_Demo.git -b gh-pages
+          npx gh-pages -d deploy \
+            -r https://github.com/Kavahardik/CodeMagic_OTA_Demo.git \
+            -b gh-pages
+          echo "✅ OTA update deployed successfully to GitHub Pages"
 
+      # 6️⃣ Build Android Release APK
+      - name: Build Android Release APK
+        script: |
+          echo "Building Android release APK..."
+          cd android
+          ./gradlew assembleRelease
+          cd ..
+          echo "✅ Android release build complete"
 
     artifacts:
+      - android/app/build/outputs/apk/release/*.apk
       - ota/update.jsbundle
       - ota/manifest.json
 
