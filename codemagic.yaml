@@ -6,7 +6,7 @@ workflows:
       java: 17
       vars:
         YARN_IGNORE_ENGINES: 1
-        GITHUB_TOKEN: Encrypted(...) # Add this in CodeMagic env variables (explained below)
+        GITHUB_TOKEN: $GITHUB_TOKEN # Add this in CodeMagic env variables (explained below)
 
     scripts:
       # 1️⃣ Clean workspace
