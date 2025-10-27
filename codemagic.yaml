@@ -20,7 +20,11 @@ workflows:
       - name: Install dependencies
         script: |
           echo "Installing dependencies..."
-          yarn install --ignore-engines
+          if [ -f yarn.lock ]; then
+            yarn install --network-timeout 600000
+          else
+            npm install
+          fi
 
       # 3️⃣ Generate OTA JS bundle
       - name: Generate OTA bundle
