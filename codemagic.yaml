@@ -10,7 +10,7 @@ workflows:
         GITHUB_ACTOR: kavahardik
         GITHUB_REPO: CodeMagic_OTA_Demo
         GITHUB_BRANCH: Code_Magic_OTA_Hardik
-        GITHUB_TOKEN: $GITHUB_TOKEN # Add this as a secure variable in CodeMagic Environment Variables
+        GITHUB_TOKEN: $MY_GITHUB_TOKEN # Add this as a secure variable in CodeMagic Environment Variables
 
 
     scripts:
