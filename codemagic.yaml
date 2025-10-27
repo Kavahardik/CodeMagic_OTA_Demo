@@ -106,7 +106,7 @@ workflows:
           # Deploy using gh-pages to your custom branch
           npx gh-pages \
             -d deploy \
-            -r https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPO.git \
+            -r https://kavahardik:$GITHUB_TOKEN@github.com/kavahardik/CodeMagic_OTA_Demo.git \
             -b $GITHUB_BRANCH \
             --add \
             --no-history \
