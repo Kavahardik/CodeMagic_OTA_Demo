@@ -1,0 +1,111 @@
+workflows:
+  Android-Build:
+    name: Android Release Build
+    environment:
+      vars:
+        NPM_TOKEN: $NPM_TOKEN
+        YARN_IGNORE_ENGINES: 1
+    scripts:
+      - name: Clean stray yarn files (if any)
+        script: |
+          rm -f /Users/builder/package.json /Users/builder/yarn.lock
+      - name: Clean Android Project
+        script: |
+          cd android
+          ./gradlew clean
+          cd ..
+
+      - name: Debug native_modules.gradle
+        script: |
+          if [ -f node_modules/@react-native-community/cli-platform-android/native_modules.gradle ]; then
+            echo "native_modules.gradle exists"
+            head -n 401 node_modules/@react-native-community/cli-platform-android/native_modules.gradle | tail -n 20
+          else
+            echo "native_modules.gradle does not exist"
+            exit 1
+          fi
+
+      - name: Create Android Build
+        script: |
+          cd android
+          ./gradlew assembleRelease
+
+    artifacts:
+      - android/app/build/outputs/apk/release/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - "hardik.k@digipay.guru"
+
+  Android-Build-With-AppCenter-OTA:
+    name: Android Build + App Center OTA
+    environment:
+      vars:
+        NPM_TOKEN: $NPM_TOKEN
+        YARN_IGNORE_ENGINES: 1
+        APPCENTER_ACCESS_TOKEN: $APPCENTER_ACCESS_TOKEN
+        MOBILE_CENTER_CURRENT_APP: dev-digipay.guru/DGePay-Merchant
+
+    scripts:
+      # 1️⃣ Clean stray files
+      - name: Clean stray yarn files
+        script: |
+          rm -f /Users/builder/package.json /Users/builder/yarn.lock
+
+      # 2️⃣ Setup npm and install dependencies
+      - name: Setup .npmrc and Install Dependencies
+        script: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          yarn install
+
+      # 3️⃣ Install App Center CLI locally
+      - name: Install App Center CLI
+        script: |
+          yarn add --dev appcenter-cli
+
+      # 4️⃣ Generate JS Bundle
+      - name: Generate JS Bundle
+        script: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+
+      # 5️⃣ Publish CodePush OTA Update
+      - name: Publish OTA Update to App Center
+        script: |
+          APP_VERSION=$(grep versionName android/app/build.gradle | head -1 | awk '{print $2}' | tr -d '"')
+          echo "Releasing CodePush update for version $APP_VERSION"
+          npx appcenter codepush release \
+            --app "$MOBILE_CENTER_CURRENT_APP" \
+            --update-contents-path android/app/src/main \
+            --deployment-name Production \
+            --target-binary-version "$APP_VERSION" \
+            --description "JS bundle update" \
+            --token "$APPCENTER_ACCESS_TOKEN"
+
+      # 6️⃣ Clean Android project
+      - name: Clean Android Project
+        script: |
+          cd android
+          ./gradlew clean
+          cd ..
+
+      # 7️⃣ Build Android APK
+      - name: Create Android Build (APK)
+        script: |
+          cd android
+          ./gradlew assembleRelease
+          cd ..
+
+    artifacts:
+      - android/app/build/outputs/apk/release/*.apk
+
+    publishing:
+      email:
+        recipients:
+          - "hardik.k@digipay.guru"
