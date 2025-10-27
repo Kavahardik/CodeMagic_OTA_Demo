@@ -6,77 +6,110 @@ workflows:
       java: 17
       vars:
         YARN_IGNORE_ENGINES: 1
-        GITHUB_TOKEN: $GITHUB_TOKEN # Add this in CodeMagic env variables (explained below)
+        GITHUB_ACTOR: Kavahardik
+        GITHUB_REPO: CodeMagic_OTA_Demo
+        GITHUB_BRANCH: Code_Magic_OTA_Hardik
+        GITHUB_TOKEN: $GITHUB_TOKEN # Add this in CodeMagic Environment Variables
 
     scripts:
       # 1️⃣ Clean workspace
       - name: Clean previous OTA and Android build files
         script: |
-          rm -rf ota
+          echo "🧹 Cleaning workspace..."
+          rm -rf ota deploy
           mkdir -p ota
           cd android
           ./gradlew clean
           cd ..
+          echo "✅ Clean complete."
 
       # 2️⃣ Install dependencies
       - name: Install dependencies
         script: |
-          echo "Installing dependencies..."
+          echo "📦 Installing dependencies..."
           if [ -f yarn.lock ]; then
             yarn install --network-timeout 600000
           else
             npm install
           fi
+          echo "✅ Dependencies installed."
 
       # 3️⃣ Generate OTA JS bundle
       - name: Generate OTA bundle
         script: |
-          echo "Creating OTA update bundle..."
+          echo "⚙️ Creating OTA bundle..."
+          mkdir -p ota
           npx react-native bundle \
             --platform android \
             --dev false \
             --entry-file index.js \
             --bundle-output ota/update.jsbundle \
             --assets-dest ota/
-          echo "✅ JS bundle generated in ota/update.jsbundle"
 
-      # 4️⃣ Create manifest.json
+          if [ ! -f "ota/update.jsbundle" ]; then
+            echo "❌ ERROR: update.jsbundle not found!"
+            exit 1
+          fi
+          echo "✅ JS bundle generated: ota/update.jsbundle"
+
+      # 4️⃣ Create manifest.json with version auto-increment
       - name: Generate OTA manifest
         script: |
-          VERSION=$(date +%s)
-          echo "{ \"version\": \"$VERSION\", \"bundle\": \"update.jsbundle\" }" > ota/manifest.json
-          echo "✅ Created manifest.json with version $VERSION"
+          echo "🧾 Generating OTA manifest..."
+
+          # Try to get last version from existing manifest (if available online)
+          LAST_VERSION=$(curl -s https://kavahardik.github.io/CodeMagic_OTA_Demo/manifest.json | jq -r '.version' 2>/dev/null || echo "0")
+          if [[ "$LAST_VERSION" == "null" || -z "$LAST_VERSION" ]]; then
+            LAST_VERSION=0
+          fi
+
+          NEW_VERSION=$((LAST_VERSION + 1))
+          echo "{ \"version\": \"$NEW_VERSION\", \"bundle\": \"update.jsbundle\", \"timestamp\": \"$(date +%s)\" }" > ota/manifest.json
+
+          cat ota/manifest.json
+          echo "✅ Manifest generated with version: $NEW_VERSION"
 
       # 5️⃣ Deploy OTA files to GitHub Pages
       - name: Publish OTA to GitHub Pages
         script: |
-          echo "Deploying OTA update to GitHub Pages..."
+          echo "🚀 Deploying OTA update to GitHub Pages..."
           npm install -g gh-pages
+
+          # Copy OTA output to deploy folder
           mkdir -p deploy
           cp ota/update.jsbundle deploy/
           cp ota/manifest.json deploy/
+
+          # Authenticate and push to GitHub
+          echo "machine github.com login $GITHUB_ACTOR password $GITHUB_TOKEN" > ~/.netrc
           npx gh-pages -d deploy \
-            -r https://$GITHUB_TOKEN@github.com/Kavahardik/CodeMagic_OTA_Demo.git \
-            -b Code_Magic_OTA_Hardik
-          echo "✅ OTA update deployed successfully to GitHub Pages"
+            -r https://github.com/$GITHUB_ACTOR/$GITHUB_REPO.git \
+            -b $GITHUB_BRANCH \
+            --user "Codemagic CI <ci@codemagic.io>" \
+            --message "Automated OTA deploy v${NEW_VERSION} [skip ci]"
+
+          echo "✅ OTA update deployed successfully!"
+          echo "🌐 View live at: https://$GITHUB_ACTOR.github.io/$GITHUB_REPO/manifest.json"
 
       # 6️⃣ Build Android Release APK
       - name: Build Android Release APK
         script: |
-          echo "Building Android release APK..."
+          echo "🏗️ Building Android release APK..."
           cd android
           ./gradlew assembleRelease
           cd ..
-          echo "✅ Android release build complete"
+          echo "✅ Android release build complete."
 
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
       - ota/update.jsbundle
       - ota/manifest.json
+
     publishing:
       email:
         recipients:
           - "hardik.k@digipay.guru"
+
   Android-Build:
     name: Android Release Build
     environment:
