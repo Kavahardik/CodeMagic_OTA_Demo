@@ -3,7 +3,6 @@ workflows:
     name: Android Release Build + GitHub OTA
     environment:
       node: 20
-      npm: true
       java: 17
       vars:
         YARN_IGNORE_ENGINES: 1
