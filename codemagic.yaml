@@ -24,6 +24,7 @@ workflows:
           ./gradlew clean
           cd ..
           echo "✅ Clean complete."
+          echo "🌍 GITHUB_TOKEN"
 
       # 2️⃣ Install dependencies
       - name: Install dependencies
