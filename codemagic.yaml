@@ -118,7 +118,7 @@ workflows:
           echo "✅ OTA update deployed successfully!"
           echo "🌍 View it at: https://$GITHUB_ACTOR.github.io/$GITHUB_REPO/manifest.json"
           echo "🌍 $GITHUB_ACTOR"
-          echo "🌍 $GITHUB_TOKEN"
+          echo "🌍 GITHUB_TOKEN"
           echo "🌍 REPO_URL"
 
       # 6️⃣ Build Android Release APK
