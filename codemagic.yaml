@@ -75,21 +75,24 @@ workflows:
           echo "🚀 Deploying OTA update to GitHub Pages..."
           npm install -g gh-pages
 
-          # Copy OTA output to deploy folder
           mkdir -p deploy
           cp ota/update.jsbundle deploy/
           cp ota/manifest.json deploy/
 
-          # Authenticate and push to GitHub
-          echo "machine github.com login $GITHUB_ACTOR password $GITHUB_TOKEN" > ~/.netrc
+          # Proper authentication for gh-pages
+          git config --global user.email "hardik.k@digipay.guru"
+          git config --global user.name $GITHUB_ACTOR
+          git config --global credential.helper store
+          echo "https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com" > ~/.git-credentials
+
           npx gh-pages -d deploy \
             -r https://github.com/$GITHUB_ACTOR/$GITHUB_REPO.git \
             -b $GITHUB_BRANCH \
-            --user "Codemagic CI <ci@codemagic.io>" \
-            --message "Automated OTA deploy v${NEW_VERSION} [skip ci]"
+            --message "🚀 OTA deploy v${NEW_VERSION}"
 
           echo "✅ OTA update deployed successfully!"
           echo "🌐 View live at: https://$GITHUB_ACTOR.github.io/$GITHUB_REPO/manifest.json"
+
 
       # 6️⃣ Build Android Release APK
       - name: Build Android Release APK
