@@ -54,7 +54,7 @@ workflows:
           cp ota/update.jsbundle deploy/
           cp ota/manifest.json deploy/
           npx gh-pages -d deploy \
-            -r https://github.com/Kavahardik/CodeMagic_OTA_Demo.git \
+            -r https://kavahardik.github.io/CodeMagic_OTA_Demo/
             -b gh-pages
           echo "✅ OTA update deployed successfully to GitHub Pages"
 
