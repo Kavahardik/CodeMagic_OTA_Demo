@@ -6,6 +6,8 @@ workflows:
       java: 17
       vars:
         YARN_IGNORE_ENGINES: 1
+        GITHUB_TOKEN: Encrypted(...) # Add this in CodeMagic env variables (explained below)
+
     scripts:
       # 1️⃣ Clean workspace
       - name: Clean previous OTA and Android build files
@@ -54,7 +56,7 @@ workflows:
           cp ota/update.jsbundle deploy/
           cp ota/manifest.json deploy/
           npx gh-pages -d deploy \
-            -r https://github.com/Kavahardik/CodeMagic_OTA_Demo.git \
+            -r https://$GITHUB_TOKEN@github.com/Kavahardik/CodeMagic_OTA_Demo.git \
             -b Code_Magic_OTA_Hardik
           echo "✅ OTA update deployed successfully to GitHub Pages"
 
@@ -71,7 +73,6 @@ workflows:
       - android/app/build/outputs/apk/release/*.apk
       - ota/update.jsbundle
       - ota/manifest.json
-
     publishing:
       email:
         recipients:
