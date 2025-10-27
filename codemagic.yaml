@@ -6,7 +6,7 @@ workflows:
       java: 17
       vars:
         YARN_IGNORE_ENGINES: 1
-        GITHUB_ACTOR: Kavahardik
+        GITHUB_ACTOR: Hardik Kava
         GITHUB_REPO: CodeMagic_OTA_Demo
         GITHUB_BRANCH: Code_Magic_OTA_Hardik
         GITHUB_TOKEN: $GITHUB_TOKEN # Add this in CodeMagic Environment Variables
@@ -73,26 +73,47 @@ workflows:
       - name: Publish OTA to GitHub Pages
         script: |
           echo "🚀 Deploying OTA update to GitHub Pages..."
+
+          # Install gh-pages tool
           npm install -g gh-pages
 
+          # Verify OTA files exist
+          if [ ! -f ota/update.jsbundle ]; then
+            echo "❌ update.jsbundle not found!"
+            exit 1
+          fi
+
+          if [ ! -f ota/manifest.json ]; then
+            echo "❌ manifest.json not found!"
+            exit 1
+          fi
+
+          # Prepare deploy folder
+          rm -rf deploy
           mkdir -p deploy
           cp ota/update.jsbundle deploy/
           cp ota/manifest.json deploy/
 
-          # Proper authentication for gh-pages
+          echo "✅ Files ready to deploy:"
+          ls -la deploy
+
+          # Configure git
           git config --global user.email "hardik.k@digipay.guru"
-          git config --global user.name $GITHUB_ACTOR
+          git config --global user.name "Hardik Kava"
           git config --global credential.helper store
           echo "https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com" > ~/.git-credentials
 
-          npx gh-pages -d deploy \
-            -r https://github.com/$GITHUB_ACTOR/$GITHUB_REPO.git \
+          # Deploy using gh-pages to your custom branch
+          npx gh-pages \
+            -d deploy \
+            -r https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPO.git \
             -b $GITHUB_BRANCH \
-            --message "🚀 OTA deploy v${NEW_VERSION}"
+            --add \
+            --no-history \
+            --message "🚀 OTA deploy $(date)"
 
           echo "✅ OTA update deployed successfully!"
-          echo "🌐 View live at: https://$GITHUB_ACTOR.github.io/$GITHUB_REPO/manifest.json"
-
+          echo "🌍 View it at: https://$GITHUB_ACTOR.github.io/$GITHUB_REPO/manifest.json"
 
       # 6️⃣ Build Android Release APK
       - name: Build Android Release APK
@@ -112,6 +133,7 @@ workflows:
       email:
         recipients:
           - "hardik.k@digipay.guru"
+
 
   Android-Build:
     name: Android Release Build
