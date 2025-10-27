@@ -31,7 +31,11 @@ workflows:
       - name: Publish to GitHub Pages
         script: |
           npm install -g gh-pages
-          npx gh-pages -d ota -r https://github.com/Kavahardik/CodeMagic_OTA_Demo.git -b gh-pages
+          mkdir -p deploy
+          cp ota/update.jsbundle deploy/
+          cp ota/manifest.json deploy/
+          npx gh-pages -d deploy -r https://github.com/Kavahardik/CodeMagic_OTA_Demo.git -b gh-pages
+
 
     artifacts:
       - ota/update.jsbundle
