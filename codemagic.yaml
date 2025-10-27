@@ -17,6 +17,7 @@ workflows:
       # 1️⃣ Clean workspace
       - name: Clean previous OTA and Android build files
         script: |
+          echo "🔍 Token length: ${#GITHUB_TOKEN}"
           echo "🧹 Cleaning workspace..."
           rm -rf ota deploy
           mkdir -p ota
