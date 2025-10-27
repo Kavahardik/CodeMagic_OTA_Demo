@@ -3,7 +3,6 @@ workflows:
     name: OTA Update via GitHub Pages
     environment:
       node: 18
-      npm: "true"
     scripts:
       # 1️⃣ Install dependencies
       - name: Install dependencies
