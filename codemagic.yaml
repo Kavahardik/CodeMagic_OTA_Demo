@@ -6,10 +6,12 @@ workflows:
       java: 17
       vars:
         YARN_IGNORE_ENGINES: 1
-        GITHUB_ACTOR: Kavahardik
+        # ⚠️ Use lowercase GitHub username (GitHub Pages URLs are case-sensitive)
+        GITHUB_ACTOR: kavahardik
         GITHUB_REPO: CodeMagic_OTA_Demo
         GITHUB_BRANCH: Code_Magic_OTA_Hardik
-        GITHUB_TOKEN: $GITHUB_TOKEN # Add this in CodeMagic Environment Variables
+        # Add this as a secure variable in CodeMagic Environment Variables
+        GITHUB_TOKEN: $GITHUB_TOKEN
 
     scripts:
       # 1️⃣ Clean workspace
@@ -57,13 +59,15 @@ workflows:
         script: |
           echo "🧾 Generating OTA manifest..."
 
-          # Try to get last version from existing manifest (if available online)
+          # Fetch last version if exists (ignore errors)
           LAST_VERSION=$(curl -s https://kavahardik.github.io/CodeMagic_OTA_Demo/manifest.json | jq -r '.version' 2>/dev/null || echo "0")
+
           if [[ "$LAST_VERSION" == "null" || -z "$LAST_VERSION" ]]; then
             LAST_VERSION=0
           fi
 
           NEW_VERSION=$((LAST_VERSION + 1))
+
           echo "{ \"version\": \"$NEW_VERSION\", \"bundle\": \"update.jsbundle\", \"timestamp\": \"$(date +%s)\" }" > ota/manifest.json
 
           cat ota/manifest.json
@@ -74,21 +78,17 @@ workflows:
         script: |
           echo "🚀 Deploying OTA update to GitHub Pages..."
 
-          # Install gh-pages tool
           npm install -g gh-pages
 
-          # Verify OTA files exist
           if [ ! -f ota/update.jsbundle ]; then
             echo "❌ update.jsbundle not found!"
             exit 1
           fi
-
           if [ ! -f ota/manifest.json ]; then
             echo "❌ manifest.json not found!"
             exit 1
           fi
 
-          # Prepare deploy folder
           rm -rf deploy
           mkdir -p deploy
           cp ota/update.jsbundle deploy/
@@ -97,17 +97,20 @@ workflows:
           echo "✅ Files ready to deploy:"
           ls -la deploy
 
-          # Configure git
+          # Configure Git identity
           git config --global user.email "hardik.k@digipay.guru"
           git config --global user.name "Hardik Kava"
-          git config --global credential.helper store
-          echo "https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com" > ~/.git-credentials
 
-          # Deploy using gh-pages to your custom branch
+          # Use lowercase actor name + correct repo URL
+          REPO_URL="https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_ACTOR/$GITHUB_REPO.git"
+
+          echo "🔗 Using repository: $REPO_URL"
+
+          # Deploy OTA files to GitHub Pages
           npx gh-pages \
-            -d deploy \
-            -r https://Kavahardik:$GITHUB_TOKEN@github.com/kavahardik/CodeMagic_OTA_Demo.git \
-            -b $GITHUB_BRANCH \
+            --dist deploy \
+            --repo "$REPO_URL" \
+            --branch "$GITHUB_BRANCH" \
             --add \
             --no-history \
             --message "🚀 OTA deploy $(date)"
@@ -133,6 +136,7 @@ workflows:
       email:
         recipients:
           - "hardik.k@digipay.guru"
+
 
 
   Android-Build:
