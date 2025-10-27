@@ -1,4 +1,47 @@
 workflows:
+  ota_deploy:
+    name: OTA Update via GitHub Pages
+    environment:
+      node: 18
+      npm: true
+    scripts:
+      # 1️⃣ Install dependencies
+      - name: Install dependencies
+        script: |
+          npm install
+
+      # 2️⃣ Bundle JS for production OTA
+      - name: Create OTA bundle
+        script: |
+          mkdir -p ota
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output ota/update.jsbundle \
+            --assets-dest ota/
+
+      # 3️⃣ Generate manifest.json dynamically
+      - name: Generate manifest.json
+        script: |
+          VERSION=$(date +%s)
+          echo "{ \"version\": \"$VERSION\", \"bundle\": \"update.jsbundle\" }" > ota/manifest.json
+          echo "Generated manifest.json with version $VERSION"
+
+      # 4️⃣ Deploy to GitHub Pages (gh-pages branch)
+      - name: Publish to GitHub Pages
+        script: |
+          npm install -g gh-pages
+          npx gh-pages -d ota -r https://github.com/Kavahardik/CodeMagic_OTA_Demo.git -b gh-pages
+
+    artifacts:
+      - ota/update.jsbundle
+      - ota/manifest.json
+
+    publishing:
+      email:
+        recipients:
+          - "hardik.k@digipay.guru"
   Android-Build:
     name: Android Release Build
     environment:
