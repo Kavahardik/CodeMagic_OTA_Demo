@@ -110,7 +110,7 @@ workflows:
           npx gh-pages \
             --dist deploy \
             --repo "$REPO_URL" \
-            --branch "$GITHUB_BRANCH" \
+            --branch "GITHUB_BRANCH" \
             --add \
             --no-history \
             --message "🚀 OTA deploy $(date)"
