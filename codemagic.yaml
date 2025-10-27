@@ -2,7 +2,7 @@ workflows:
   ota_deploy:
     name: OTA Update via GitHub Pages
     environment:
-      node: 18
+      node: 20
     scripts:
       # 1️⃣ Install dependencies
       - name: Install dependencies
