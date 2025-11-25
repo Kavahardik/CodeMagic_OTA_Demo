@@ -137,10 +137,10 @@ workflows:
       - ota/update.jsbundle
       - ota/manifest.json
 
-    publishing:
-      email:
-        recipients:
-          - "hardik.k@digipay.guru"
+#    publishing:
+#      email:
+#        recipients:
+#          - "hardik.k@digipay.guru"
 
 
 
