@@ -1,17 +1,21 @@
 workflows:
   Android-Build-With-OTA:
-    name: Android Release Build + GitHub OTA
+    name: Android Release Build + GitHub RELEASES OTA
     environment:
       node: 20
       java: 17
       vars:
         YARN_IGNORE_ENGINES: 1
-        # ⚠️ Use lowercase GitHub username (GitHub Pages URLs are case-sensitive)
-        GITHUB_ACTOR: kavahardik
-        GITHUB_REPO: CodeMagic_OTA_Demo
-        GITHUB_BRANCH: Code_Magic_OTA_Hardik
-        GITHUB_TOKEN: $FINAL_GITHUB_TOKEN # Add this as a secure variable in CodeMagic Environment Variables
+        OTA_OUTPUT: ota-build
+        OTA_VERSION: "ota-1.0.1"           # Tag name like ota-1.0.1
+        GITHUB_TOKEN: $FINAL_GITHUB_TOKEN  # Set this as secure env var in Codemagic
 
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "ota-*"
+          include: true
 
     scripts:
       # 1️⃣ Clean workspace
@@ -19,13 +23,12 @@ workflows:
         script: |
           echo "🔍 Token length: ${#GITHUB_TOKEN}"
           echo "🧹 Cleaning workspace..."
-          rm -rf ota deploy
-          mkdir -p ota
+          rm -rf $OTA_OUTPUT
+          mkdir -p $OTA_OUTPUT
           cd android
           ./gradlew clean
           cd ..
           echo "✅ Clean complete."
-          echo "🔍 Token length: ${#GITHUB_TOKEN}"
 
       # 2️⃣ Install dependencies
       - name: Install dependencies
@@ -38,92 +41,61 @@ workflows:
           fi
           echo "✅ Dependencies installed."
 
-      # 3️⃣ Generate OTA JS bundle
+      # 3️⃣ Generate OTA JS bundle (index.android.bundle)
       - name: Generate OTA bundle
         script: |
           echo "⚙️ Creating OTA bundle..."
-          mkdir -p ota
+          mkdir -p $OTA_OUTPUT
           npx react-native bundle \
             --platform android \
             --dev false \
             --entry-file index.js \
-            --bundle-output ota/update.jsbundle \
-            --assets-dest ota/
+            --bundle-output $OTA_OUTPUT/index.android.bundle \
+            --assets-dest $OTA_OUTPUT
 
-          if [ ! -f "ota/update.jsbundle" ]; then
-            echo "❌ ERROR: update.jsbundle not found!"
+          if [ ! -f "$OTA_OUTPUT/index.android.bundle" ]; then
+            echo "❌ ERROR: index.android.bundle not found!"
+            ls -la $OTA_OUTPUT
             exit 1
           fi
-          echo "✅ JS bundle generated: ota/update.jsbundle"
+          echo "✅ JS bundle generated: $OTA_OUTPUT/index.android.bundle"
 
-      # 4️⃣ Create manifest.json with version auto-increment
+      # 4️⃣ Update manifest.json for GitHub Releases OTA
       - name: Generate OTA manifest
         script: |
-          echo "🧾 Generating OTA manifest..."
-
-          # Fetch last version if exists (ignore errors)
-          LAST_VERSION=$(curl -s https://kavahardik.github.io/CodeMagic_OTA_Demo/manifest.json | jq -r '.version' 2>/dev/null || echo "0")
-
-          if [[ "$LAST_VERSION" == "null" || -z "$LAST_VERSION" ]]; then
-            LAST_VERSION=0
-          fi
-
-          NEW_VERSION=$((LAST_VERSION + 1))
-
-          echo "{ \"version\": \"$NEW_VERSION\", \"bundle\": \"update.jsbundle\", \"timestamp\": \"$(date +%s)\" }" > ota/manifest.json
-
+          echo "🧾 Generating OTA manifest for version: $OTA_VERSION"
+          node ota/updateManifest.js "$OTA_VERSION" "$OTA_OUTPUT/index.android.bundle"
+          echo "✅ Updated ota/manifest.json:"
           cat ota/manifest.json
-          echo "✅ Manifest generated with version: $NEW_VERSION"
 
-      # 5️⃣ Deploy OTA files to GitHub Pages
-      - name: Publish OTA to GitHub Pages
+      # 5️⃣ Authenticate GitHub CLI
+      - name: Authenticate GitHub CLI
         script: |
-          echo "🚀 Deploying OTA update to GitHub Pages..."
+          echo "🔐 Authenticating GitHub CLI..."
+          echo "$GITHUB_TOKEN" | gh auth login --with-token
+          gh auth status
 
-          npm install -g gh-pages
+      # 6️⃣ Create or update GitHub Release and upload OTA assets
+      - name: Publish OTA to GitHub Releases
+        script: |
+          echo "🚀 Publishing OTA to GitHub Releases with tag: $OTA_VERSION"
 
-          if [ ! -f ota/update.jsbundle ]; then
-            echo "❌ update.jsbundle not found!"
-            exit 1
-          fi
-          if [ ! -f ota/manifest.json ]; then
-            echo "❌ manifest.json not found!"
-            exit 1
-          fi
+          # Ensure we are in the repo root
+          git status
 
-          rm -rf deploy
-          mkdir -p deploy
-          cp ota/update.jsbundle deploy/
-          cp ota/manifest.json deploy/
+          # Create release if it doesn't exist
+          gh release create "$OTA_VERSION" --title "$OTA_VERSION" --notes "OTA JS update" || echo "ℹ️ Release already exists, will update assets."
 
-          echo "✅ Files ready to deploy:"
-          ls -la deploy
+          echo "📤 Uploading bundle and manifest.json to release..."
+          gh release upload "$OTA_VERSION" \
+            "$OTA_OUTPUT/index.android.bundle" \
+            "ota/manifest.json" \
+            --clobber
 
-          # Configure Git identity
-          git config --global user.email "hardik.k@digipay.guru"
-          git config --global user.name "Hardik Kava"
+          echo "✅ OTA assets uploaded to GitHub Release:"
+          echo "   https://github.com/Kavahardik/CodeMagic_OTA_Demo/releases/tag/$OTA_VERSION"
 
-          # Use lowercase actor name + correct repo URL
-          REPO_URL="https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_ACTOR/$GITHUB_REPO.git"
-
-          echo "🔗 Using repository: $REPO_URL"
-
-          # Deploy OTA files to GitHub Pages
-          npx gh-pages \
-            --dist deploy \
-            --repo "$REPO_URL" \
-            --branch "GITHUB_BRANCH" \
-            --add \
-            --no-history \
-            --message "🚀 OTA deploy $(date)"
-
-          echo "✅ OTA update deployed successfully!"
-          echo "🌍 View it at: https://$GITHUB_ACTOR.github.io/$GITHUB_REPO/manifest.json"
-          echo "🌍 $GITHUB_ACTOR"
-          echo "🌍 GITHUB_TOKEN"
-          echo "🌍 REPO_URL"
-
-      # 6️⃣ Build Android Release APK
+      # 7️⃣ Build Android Release APK (optional but kept from your original)
       - name: Build Android Release APK
         script: |
           echo "🏗️ Building Android release APK..."
@@ -134,13 +106,8 @@ workflows:
 
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
-      - ota/update.jsbundle
+      - ota-build/index.android.bundle
       - ota/manifest.json
-
-#    publishing:
-#      email:
-#        recipients:
-#          - "hardik.k@digipay.guru"
 
 
 
@@ -182,6 +149,7 @@ workflows:
       email:
         recipients:
           - "hardik.k@digipay.guru"
+
 
   Android-Build-With-AppCenter-OTA:
     name: Android Build + App Center OTA
